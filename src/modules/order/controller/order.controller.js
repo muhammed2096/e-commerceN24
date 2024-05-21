@@ -6,7 +6,7 @@ import { productModel } from "../../../../db/models/product.model.js"
 import { catchError } from "../../../middleware/catchError.js"
 import { appError } from "../../../utils/appError.js"
 import Stripe from 'stripe';
-const stripe = new Stripe(process.env.STRIPE_KEY);
+const stripe = new Stripe('sk_test_51OyLjB06k8V6miqkOwgi5UmAKs0xuFYClm4oN3pzOoOp9aOW8HNkk2JxjQu3qEiJ8AKslsWHY8QFMHpBLXjdG9aq00fLwb2UKS');
 
 
 const createCashOrder = catchError(async (req, res, next) => {
@@ -81,7 +81,7 @@ const createOnlineSesssion = catchError((request, response) => {
         console.log(`Unhandled event type ${event.type}`);
     }
   });
-  
+   
   
 
 
