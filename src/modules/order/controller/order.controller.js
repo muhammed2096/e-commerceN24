@@ -1,8 +1,8 @@
 
 import { cartModel } from "../../../../db/models/cart.model.js"
-import { couponModel } from "../../../../db/models/coupon.model.js"
 import { orderModel } from "../../../../db/models/order.model.js"
 import { productModel } from "../../../../db/models/product.model.js"
+import { userModel } from "../../../../db/models/user.model.js"
 import { catchError } from "../../../middleware/catchError.js"
 import { appError } from "../../../utils/appError.js"
 import Stripe from 'stripe';
@@ -91,4 +91,44 @@ export {
     getAllOrders,
     createCheckOutSession,
     createOnlineSesssion
+}
+
+
+async function card(e, res) {
+    try {
+        let cart = await cartModel.findById(e.client_reference_id);
+        if (!cart) throw new appError('Cart not found', 404);
+
+        let user = await userModel.findOne({ email: e.customer_email });
+        if (!user) throw new appError('User not found', 404);
+
+        let order = new orderModel({
+            user: user._id,
+            orderItem: cart.cartItems,
+            totalOrderPrice: e.amount_total / 100,
+            shippingAddress: e.metadata.shippingAddress,
+            paymentType: "card",
+            isPaid: true,
+            paidAt: Date.now()
+        });
+
+        await order.save();
+
+        let options = cart.cartItems.map((prod) => {
+            return ({
+                updateOne: {
+                    "filter": { _id: prod.product },
+                    "update": { $inc: { sold: prod.quantity, quantity: -prod.quantity } }
+                }
+            });
+        });
+
+        await productModel.bulkWrite(options);
+        await cartModel.findByIdAndDelete(cart._id);
+
+        res.send({ message: 'success', order });
+    } catch (error) {
+        console.error('Error processing checkout:', error);
+        throw error;
+    }
 }
