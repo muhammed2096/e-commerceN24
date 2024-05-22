@@ -10,8 +10,18 @@ import { apiFeatures } from "../../../utils/apiFeatures.js"
 
 const addProduct = catchError(async (req, res, next)=>{
     req.body.slug = slugify(req.body.title)
-    req.body.imgCover = req.files.imgCover[0].filename  
-    req.body.images = req.files.images.map((img)=> img.filename)
+    const coverImageResult = await cloudinaryConfig().uploader.upload(req.files.imageCover[0].path, {
+        folder: 'Ecommerce/product/coverimage',
+    });
+    const uploadPromises = req.files.images.map(async (file) => {
+        const result = await cloudinaryConfig().uploader.upload(file.path, {
+            folder: 'Ecommerce/product/images',
+        });
+        return result.url;
+    });
+    const images = await Promise.all(uploadPromises);
+    req.body.imgCover = coverImageResult.url;
+    req.body.images = images;
     let product = new productModel(req.body)
     await product.save() 
     res.json({message:"Success", product})
@@ -32,8 +42,23 @@ const getSingleProduct = catchError(async (req, res, next)=>{
 
 const updateProduct = catchError(async (req, res, next)=>{
     if(req.body.title) req.body.slug = slugify(req.body.title)
-    if(req.files.imgCover) req.body.imgCover = req.files.imgCover[0].filename  
-    if(req.files.images) req.body.images = req.files.images.map((img)=> img.filename) 
+        let productImg = await productModel.findById(req.params.id)
+    if (req.body.title) req.body.slug = slugify(req.body.title)
+    if (req.file) {
+        let publicId = productImg.imgCover.split('/').pop().split('.')[0]
+        await cloudinaryConfig().uploader.destroy(publicId, (err, result) => {
+            if (err) {
+                console.error(err);
+            } else {
+                console.log(result);
+            }
+        });
+
+        let image = await cloudinaryConfig().uploader.upload(req.file.path, {
+            folder: 'Ecommerce/product'
+        })
+        req.body.imgCover = image.url
+    } 
     let product = await productModel.findByIdAndUpdate(req.params.id, req.body, {new:true})
     !product && next(new appError("product not found :(", 404))
     product && res.json({message:"Success", product})

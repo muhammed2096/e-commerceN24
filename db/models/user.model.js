@@ -46,7 +46,13 @@ const schema = new mongoose.Schema({
         phone:String,
         city:String,
         zip:Number
-    }]
+    }],
+    verifyCode: String,
+    resetCode: String,
+    isverify: {
+        type: Boolean,
+        default: false
+    }
 },{
     timestamps:true
 })

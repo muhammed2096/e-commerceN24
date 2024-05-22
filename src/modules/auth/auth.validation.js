@@ -17,9 +17,31 @@ const changePasswordVal = joi.object({
     reNewPassword:joi.valid(joi.ref('newPassword')).required()
 })
 
+const isverifyVal = joi.object({
+    code:joi.string().required()
+})
+
+const forgetPasswordVal = joi.object({
+    email:joi.string().email().required()
+})
+const checkCodeVal = joi.object({
+    code:joi.string().required(),
+    email:joi.string().email().required()
+})
+
+const resetPasswordVal = joi.object({
+    email:joi.string().email().required(),
+    newPassword: joi.string().pattern(/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/).required(),
+    reNewPassword: joi.valid(joi.ref('newPassword')).required()
+})
+
 
 export {
     signupVal,
     signinVal,
-    changePasswordVal
+    changePasswordVal,
+    isverifyVal,
+    forgetPasswordVal,
+    checkCodeVal,
+    resetPasswordVal
 }

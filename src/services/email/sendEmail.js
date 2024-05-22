@@ -1,27 +1,24 @@
 
-import jwt from "jsonwebtoken"
-import nodemailer from "nodemailer"
-import { emailTemp } from "./emailTemplate.js"
+import { createTransport } from "nodemailer";
 
-export const sendEmail = async(email) =>{
-    const transporter = nodemailer.createTransport({
-        service:"gmail",
+export function sendEmail(verifyCode, email) {
+    const transporter = createTransport({
+        service: 'gmail',
         auth: {
-          // TODO: replace `user` and `pass` values from <https://forwardemail.net>
-          user: process.env.EMAIL_NAME,
-          pass: process.env.EMAIL_PASS,
+            user: "test011524@gmail.com",
+            pass: "rbmfawkhxwjrrfle",
         },
-    })
+    });
+    async function main() {
+        const info = await transporter.sendMail({
+            from: '"Account verify" <test011524@gmail.com>', // sender address
+            to: email, // list of receivers
+            subject: "Welcome", // Subject line
+            text: `Your verify code is ${verifyCode} `, // plain text body
+            html: ``, // html body
+        });
+        console.log("Message sent: %s", info.messageId);
+    }
+
+    main().catch(console.error);
 }
-
-let token = jwt.sign({email}, 'sendingEmail')
- // send mail with defined transport object
- const info = await transporter.sendMail({
-    from: `"Fred Foo 👻" <${process.env.EMAIL_NAME}>`, // sender address
-    to: email, // list of receivers
-    subject: "Hello ✔", // Subject line
-    text: "Hello world?", // plain text body
-    html: emailTemp(token), // html body
-  });
-
-  console.log("Message sent: %s", info.messageId); 

@@ -3,12 +3,18 @@ import { appError } from "../../../utils/appError.js"
 import { userModel } from "../../../../db/models/user.model.js"
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { sendEmail } from "../../../services/email/sendEmail.js"
+import { nanoid } from "nanoid"
+
 
 
 const signup = catchError(async (req, res, next) => {
+    let Code = nanoid(6);
+    req.body.verifyCode = Code
     let user = new userModel(req.body)
     await user.save()
     let token = jwt.sign({userId:user._id, role:user.role}, process.env.JWT_KEY)
+    sendEmail(Code, req.body.email)
     !user && next(new appError('invalid data', 404))
     user && res.send({ message: 'success', user, token })
 })
@@ -23,6 +29,14 @@ const signin = catchError(async (req, res, next) => {
     next(new appError('Incorrect email or password', 401))
 })
 
+const isVerify = catchError(async (req, res, next) => {
+    let verify = await userModel.findOne({ _id: req.user._id, verifyCode: req.body.code })
+    if (!verify) return next(new appError('code invalid', 401))
+    let verified = await userModel.findOneAndUpdate({ _id: req.user._id }, { isverify: true },)
+    if (!verified) return next(new appError('verify faild', 401))
+    res.send({ message: 'success' })
+})
+
 const changePassword = catchError(async (req, res, next) => {
     let { oldPassword, newPassword } = req.body
     if (bcrypt.compareSync(oldPassword, req.user.password)) {
@@ -30,6 +44,27 @@ const changePassword = catchError(async (req, res, next) => {
         let token = jwt.sign({ userId: req.user._id, role: req.user.role }, process.env.SECERET_KEY)
         return res.send({ message: 'success', token })
     }
+})
+
+const forgetPassword = catchError(async (req, res, next) => {
+    let { email } = req.body
+    let user = await userModel.findOne({ email })
+    if (!user) return next(new appError('no account for this email', 401))
+    let resetCode = nanoid(6)
+    await userModel.findOneAndUpdate({ email }, { resetCode })
+    sendEmail(resetCode, email)
+    res.send({ message: 'success' })
+})
+const checkCode = catchError(async (req, res, next) => {
+    let { email, code } = req.body
+    let verify = await userModel.findOne({ email: email, resetCode: code })
+    if (!verify) return next(new appError('code invalid', 401))
+    res.send({ message: 'success' })
+})
+const resetPassword = catchError(async (req, res, next) => {
+    let user = await userModel.findOneAndUpdate({ email: req.body.email }, { password: req.body.newPassword, passwordChangedAt: Date.now() })
+    let token = jwt.sign({ userId: user._id, role: user.role }, process.env.SECERET_KEY)
+    res.send({ message: 'success', token })
 })
 
 const protectedRoutes = catchError(async (req, res, next) => {
@@ -60,5 +95,9 @@ export{
     signin,
     protectedRoutes,
     changePassword,
-    allowedTo
+    allowedTo,
+    isVerify,
+    forgetPassword,
+    checkCode,
+    resetPassword
 }
